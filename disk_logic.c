@@ -38,13 +38,12 @@ off_t write_to_file(int fd, struct Data data)
 
     offset = lseek(fd, 0, SEEK_END);
 
-    if (write(fd, &data.data_size, sizeof(size_t)) == -1)
+    if (write(fd, &data.key_size, sizeof(size_t)) == -1 ||
+        write(fd, data.key, data.key_size) == -1)
         return -1;
-    
-    if (write(fd, data.data, data.data_size) == -1)
-        return -1;
-    
-    if (write(fd, "\n", 1) == -1)
+
+    if (write(fd, &data.value_size, sizeof(size_t)) == -1 ||
+        write(fd, data.value, data.value_size) == -1)
         return -1;
 
     return offset;
@@ -53,7 +52,8 @@ off_t write_to_file(int fd, struct Data data)
 struct Data read_file(int fd, off_t offset)
 {
     struct Data result;
-    result.data = NULL;
+    result.key = NULL;
+    result.value = NULL;
 
     if (fd == -1)
     {
@@ -61,8 +61,13 @@ struct Data read_file(int fd, off_t offset)
     }
 
     lseek(fd, offset, SEEK_SET);
-    read(fd, &result.data_size, sizeof(size_t));
-    result.data = calloc(result.data_size, sizeof(char));
-    read(fd, result.data, result.data_size);
+    read(fd, &result.key_size, sizeof(size_t));
+    result.key = calloc(result.key_size, sizeof(char));
+    read(fd, result.key, result.key_size);
+    
+    read(fd, &result.value_size, sizeof(size_t));
+    result.value = calloc(result.value_size, sizeof(char));
+    read(fd,result.value, result.value_size);
+
     return result;
 }

@@ -5,8 +5,10 @@
 
 struct Data
 {
-    void *data;
-    size_t data_size;
+    size_t key_size;
+    size_t value_size;
+    void *key;
+    void *value;
 };
 
 struct Data make_data(char *key, char *value);
