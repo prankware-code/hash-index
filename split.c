@@ -34,6 +34,8 @@ void free_splits(char **split_str)
     }
     
     free(copy);
+
+    split_str = NULL;
 }
 
 char **split(char *str, char delimether)

@@ -2,47 +2,108 @@
 #include "../split.h"
 #include <string.h>
 #include <stdio.h>
+#include "split_test.h"
+#include <stdlib.h>
 
-void check_equals(size_t a, size_t b)
+void* my_malloc(size_t size, size_t sz)
 {
-    if (a != b)
-    {
-        printf("ERROR: %lu != %lu\n", a, b);
+    static int counter = 0; // Статическая переменная сохраняет значение между вызовами
+    counter++;
+
+    if (counter == 3) {
+        printf("[DEBUG] Имитация отказа: 3-е выделение вернуло NULL\n");
+        return NULL;
     }
+
+    // Вызываем настоящий malloc
+    void* ptr = calloc(size, sz);
+    printf("[DEBUG] Вызов %d: выделено %zu байт по адресу %p\n", counter, size, ptr);
+    return ptr;
 }
 
-void check_words(const char **a, const char **b)
+bool check_words(char **a, const char **b)
 {
     for (;a && (*a) && b && (*b); a++, b++)
     {
-        for (;(**a) && (**b); (*a)++, (*b)++)
+        if (strcmp(*a, *b) != 0)
         {
-            if (**a != **b)
-            {
-                printf("ERROR: %s != %s\n", *a, *b);
-            }
+            printf("ERROR: %s != %s\n", *a, *b);
+            return false;
         }
     }
 
     if ((a && !b) || (b && !a) || ((*a && !(*b)) || (!*a && *b)))
     {
         printf("ERROR: len(a) != len(b)\n");
+        return false;
     }
+
+    return true;
 }
 
-int main()
+bool check_equals(size_t a, size_t b)
 {
-    printf("BEGIN TESTS\n");
+    if (a != b)
+    {
+        printf("ERROR: %lu != %lu\n", a, b);
+        return false;
+    }
 
-    check_equals(str_words_count("123 456 789", ' '), 3);
-    check_equals(str_words_count("123  456  789    q", ' '), 4);
-    check_equals(str_words_count("123            456             789   q         1", ' '), 5);
-    check_equals(str_words_count("       123 456        ", ' '), 2);
+    return true;
+}
 
-    check_words(split("123 456 789", ' '), (const char *[]){"123", "456", "789", NULL});
-    check_words(split("123  456  789    q", ' '), (const char *[]){"123", "456", "789", "q", NULL});
-    check_words(split("123            456             789   q         1", ' '), (const char *[]){"123", "456", "789", "q", "1", NULL});
-    check_words(split("       123 456        ", ' '), (const char *[]){"123", "456", NULL});
+bool test_split_all_functions()
+{
+    bool result = true;
 
-    printf("END TESTS\n");
+    result = result && test_words_count();
+    result = result && test_split();
+    result = result && test_free_split();
+
+    return result;
+}
+
+bool test_words_count()
+{
+    bool result = true;
+
+    result = result && check_equals(str_words_count("123 456 789", ' '), 3);
+    result = result && check_equals(str_words_count("123  456  789    q", ' '), 4);
+    result = result && check_equals(str_words_count("123            456             789   q         1", ' '), 5);
+    result = result && check_equals(str_words_count("       123 456        ", ' '), 2);
+
+    return result;
+}
+
+bool test_split()
+{
+    bool result = true;
+    char **data;
+
+    data = split("123 456 789", ' ');
+    result = result && check_words(data, (const char *[]){"123", "456", "789", NULL});
+    free_splits(data);
+
+    data = split("123  456  789    q", ' ');
+    result = result && check_words(data, (const char *[]){"123", "456", "789", "q", NULL});
+    free_splits(data);
+
+    data = split("123            456             789   q         1", ' ');
+    result = result && check_words(data, (const char *[]){"123", "456", "789", "q", "1", NULL});
+    free_splits(data);
+
+    data = split("       123 456        ", ' ');
+    result = result && check_words(data, (const char *[]){"123", "456", NULL});
+    free_splits(data);
+
+    return result;
+}
+
+bool test_free_split()
+{
+    char** data = split("123;456", ';');
+    free_splits(data);
+    free_splits(NULL);
+
+    return true;
 }
