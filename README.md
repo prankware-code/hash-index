@@ -3,7 +3,7 @@ TODO:
 - Add unit tests:
     * [x] split
     * [x] data
-    * [ ] hash
+    * [x] hash
     * [ ] disk_logic
     * [ ] command_handlers
 - Add pipes

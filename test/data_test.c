@@ -2,8 +2,8 @@
 #include "../data.h"
 #include <string.h>
 
-extern int mock_calloc_limit;
-extern int calloc_counter;
+extern int mock_alloc_limit;
+extern int alloc_counter;
 
 bool cmpdata(struct Data a, struct Data b)
 {
@@ -29,23 +29,23 @@ bool test_make_data()
     struct Data data;
 
     {
-        mock_calloc_limit = 0;
-        calloc_counter = 0;
+        mock_alloc_limit = 0;
+        alloc_counter = 0;
         data = make_data("qwerty", "zxc01");
         result = result && cmpdata(data, (struct Data){0, 0, NULL, NULL});
 
-        mock_calloc_limit = 1;
-        calloc_counter = 0;
+        mock_alloc_limit = 1;
+        alloc_counter = 0;
         data = make_data("qwerty", "zxc01");
         result = result && cmpdata(data, (struct Data){0, 0, NULL, NULL});
 
-        mock_calloc_limit = 2;
-        calloc_counter = 0;
+        mock_alloc_limit = 2;
+        alloc_counter = 0;
         data = make_data("qwerty", "zxc01");
         result = result && cmpdata(data, (struct Data){6, 5, "qwerty", "zxc01"});
         destroy_data(&data);
 
-        mock_calloc_limit = -1;
+        mock_alloc_limit = -1;
     }
 
     data = make_data("12", "12345");

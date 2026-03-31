@@ -28,6 +28,9 @@ struct Data make_data(const char *key, const char *value)
 
 void destroy_data(struct Data *data)
 {
+    if (!data)
+        return;
+
     if (data->key)
         free(data->key);
 

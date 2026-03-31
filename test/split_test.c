@@ -5,8 +5,8 @@
 #include "split_test.h"
 #include <stdlib.h>
 
-extern int mock_calloc_limit;
-extern int calloc_counter;
+extern int mock_alloc_limit;
+extern int alloc_counter;
 
 bool check_words(char **a, const char **b)
 {
@@ -73,28 +73,28 @@ bool test_split()
     char **data;
 
     {
-        mock_calloc_limit = 2;
-        calloc_counter = 0;
+        mock_alloc_limit = 2;
+        alloc_counter = 0;
         data = split("123  456  789    q", ' ');
         result = result && check_words(data, NULL);
 
-        mock_calloc_limit = 3;
-        calloc_counter = 0;
+        mock_alloc_limit = 3;
+        alloc_counter = 0;
         data = split("123 456 789", ' ');
         result = result && check_words(data, NULL);
 
-        mock_calloc_limit = 0;
-        calloc_counter = 0;
+        mock_alloc_limit = 0;
+        alloc_counter = 0;
         data = split("123  456  789    q", ' ');
         result = result && check_words(data, NULL);
 
-        mock_calloc_limit = 6;
-        calloc_counter = 0;
+        mock_alloc_limit = 6;
+        alloc_counter = 0;
         data = split("123            456             789   q         1", ' ');
         result = result && check_words(data, (const char *[]){"123", "456", "789", "q", "1", NULL});
         free_splits(data);
 
-        mock_calloc_limit = -1;
+        mock_alloc_limit = -1;
     }
 
     data = split("123 456 789", ' ');

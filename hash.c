@@ -5,11 +5,41 @@
 #include <unistd.h>
 #include <stdlib.h>
 
-#define HASH_ARRAY_SIZE 1048576
+
+Node* init_node()
+{
+    Node *node = (Node *)malloc(sizeof(Node));
+
+    if (!node)
+        return NULL;
+
+    node->key = NULL;
+    node->data = NULL;
+    node->data_length = 0;
+    node->next = NULL;
+
+    return node;
+}
+
+void destroy_node(Node* node)
+{
+    if (!node)
+        return;
+    if (node->data)
+        free(node->data);
+    if (node->key)
+        free(node->key);
+    free(node);
+}
 
 size_t accumulate_array(char *arr)
 {
     size_t result = 0;
+
+    if (arr == NULL)
+    {
+        return 0;
+    }
 
     for (size_t i = 0; arr[i] != '\0'; ++i)
     {
@@ -21,6 +51,8 @@ size_t accumulate_array(char *arr)
 
 size_t hashing(char *str)
 {
+    if (str == NULL || HASH_ARRAY_SIZE == 0)
+        return 0;
     return (strlen(str) + accumulate_array(str)) % HASH_ARRAY_SIZE;
 }
 
@@ -28,46 +60,45 @@ Node** init_hash()
 {
     Node **hash = (Node **)calloc(HASH_ARRAY_SIZE, sizeof(Node *));
 
-    if (!hash)
-    {
-        perror("malloc");
-        exit(errno);
-    }
-
     return hash;
 }
 
-void free_node(Node* node)
+void destroy_hash(Node **hash)
 {
-    free(node->data);
-    free(node->key);
-    free(node);
-}
+    if (!hash)
+        return;
 
-void free_hash(Node **hash)
-{
     for (size_t i = 0; i < HASH_ARRAY_SIZE; ++i)
     {
         while (hash[i])
         {
             Node *next = hash[i]->next;
-            free_node(hash[i]);
+            destroy_node(hash[i]);
             hash[i] = next;
         }
     }
+
     free(hash);
 }
 
 void set_value(Node** hash, char* key, char *value)
 {
+    Node *node, *next;
     size_t idx = hashing(key);
 
-    Node *node = (Node *)malloc(sizeof(Node));
+    if (hash == NULL || key == NULL)
+    {
+        return;
+    }
 
+    node = init_node();
     node->key = strdup(key);
-    node->data = strdup(value);
-    node->data_length = strlen(node->data);
-    node->next = NULL;
+
+    if (value)
+    {
+        node->data = strdup(value);
+        node->data_length = strlen(node->data);
+    }
 
     if (hash[idx] == NULL)
     {
@@ -75,7 +106,7 @@ void set_value(Node** hash, char* key, char *value)
         return;
     }
 
-    Node* next = hash[idx];
+    next = hash[idx];
 
     while(next->next)
     {
@@ -87,8 +118,11 @@ void set_value(Node** hash, char* key, char *value)
     if (strcmp(next->key, node->key) == 0)
     {
         free(next->data);
-        next->data = strdup(node->data);
-        free_node(node);
+        next->data = NULL;
+        if (node->data)
+            next->data = strdup(node->data);
+        next->data_length = node->data_length;
+        destroy_node(node);
         return;
     }
 
@@ -98,8 +132,14 @@ void set_value(Node** hash, char* key, char *value)
 char *get_value(Node** hash, char* key)
 {
     size_t idx = hashing(key);
-    Node *node = hash[idx];
+    Node *node;
 
+    if (hash == NULL || key == NULL)
+    {
+        return NULL;
+    }
+
+    node = hash[idx];
     while(node)
     {
         if (strcmp(node->key, key) == 0)
@@ -108,5 +148,6 @@ char *get_value(Node** hash, char* key)
         }
         node = node->next;
     }
+
     return NULL;
 }

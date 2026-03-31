@@ -90,6 +90,6 @@ int main()
 {
     Node** hash = init_hash();
     read_commands(hash);
-    free_hash(hash);
+    destroy_hash(hash);
     return 0;
 }

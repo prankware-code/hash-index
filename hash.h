@@ -3,6 +3,10 @@
 
 #include <string.h>
 
+#ifndef HASH_ARRAY_SIZE
+#define HASH_ARRAY_SIZE 1048576
+#endif
+
 typedef struct Node
 {
     void            *key;
@@ -12,7 +16,7 @@ typedef struct Node
 } Node;
 
 Node** init_hash();
-void free_hash(Node **hash);
+void destroy_hash(Node **hash);
 
 void set_value(Node** hash, char* key, char *value);
 char *get_value(Node** hash, char* key);
@@ -20,7 +24,8 @@ char *get_value(Node** hash, char* key);
 #ifdef INCLUDE_UTIL
 size_t accumulate_array(char *arr);
 size_t hashing(char *str);
-void free_node(Node* node);
+Node* init_node();
+void destroy_node(Node* node);
 #endif
 
 #endif
