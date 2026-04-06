@@ -1,0 +1,59 @@
+name: Makefile CI
+
+on:
+  push:
+    branches: [ "master" ]
+  pull_request:
+    branches: [ "master" ]
+
+jobs:
+
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build project
+        run: make
+
+      - name: Build tests
+        run: make tests
+
+      - name: Upload binary
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-output
+          path: a.out
+
+  test:
+    runs-on: ubuntu-latest
+    needs: build
+    steps:
+      - name: Download binary
+        uses: actions/download-artifact@v4
+        with:
+          name: build-output
+
+      - name: Make binary executable
+        run: chmod +x ./a.out
+
+      - name: Run tests
+        run: ./a.out
+
+  valgrind:
+    runs-on: ubuntu-latest
+    needs: build
+    steps:
+      - name: Download binary
+        uses: actions/download-artifact@v4
+        with:
+          name: build-output
+
+      - name: Make binary executable
+        run: chmod +x ./a.out
+
+      - name: Install valgrind
+        run: sudo apt-get install -y valgrind
+
+      - name: Run valgrind
+        run: valgrind --leak-check=full --error-exitcode=1 --errors-for-leak-kinds=all ./a.out
