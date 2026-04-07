@@ -4,7 +4,6 @@
 #include "hash.h"
 #include "disk_logic.h"
 #include <sys/stat.h>
-#include <sys/types.h>
 #include <time.h>
 #include <unistd.h>
 
@@ -13,7 +12,6 @@ bool handle_data(Node **hash, int fd, bool (*handler)(Node**, struct Data, off_t
 char* get_next_name(int meta_fd)
 {
     time_t t;
-    struct stat stats;
     struct Data data;
     char *result;
 
