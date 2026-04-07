@@ -3,19 +3,99 @@
 #include "split.h"
 #include "hash.h"
 #include "disk_logic.h"
+#include <sys/stat.h>
+#include <time.h>
+#include <unistd.h>
 
-int handle_command(size_t argc, char** argv, Node** hash)
+bool handle_data(Node **hash, int fd, bool (*handler)(Node**, struct Data, off_t));
+
+char* get_next_name(int meta_fd)
+{
+    time_t t;
+    struct Data data;
+    char *result;
+
+    off_t offset = lseek(meta_fd, 0, SEEK_SET);
+
+    while ((data = read_file(meta_fd, offset)).key != NULL)
+    {
+        if (!is_full_file(data.key))
+        {
+            result = strdup(data.key);
+            destroy_data(&data);
+            return result;
+        }
+        destroy_data(&data);
+        offset = lseek(meta_fd, 0, SEEK_CUR);
+    }
+
+    time(&t);
+    result = strdup(ctime(&t));
+    result[strlen(result) - 1] = '\0';
+
+    return result;
+}
+
+bool data_handler(Node** hash, struct Data data, off_t offset)
+{
+    char buf[20];
+    sprintf(buf, "%ld", offset);
+    set_value(hash, data.key, buf);
+
+    return true;
+}
+
+bool metadata_handler(Node** hash, struct Data data, off_t offset)
+{
+    char path[256] = {0};
+    int fd = -1;
+
+    sprintf(path, "data/%s", (char *)data.key);
+
+    if (!file_exists(path))
+    {
+        return false;
+    }
+
+    if (!create_file(&fd, path))
+    {
+        destroy_data(&data);
+        return false;
+    }
+
+    handle_data(hash, fd, data_handler);
+    delete_file(fd);
+
+    return true;
+}
+
+bool handle_data(Node **hash, int fd, bool (*handler)(Node**, struct Data, off_t))
+{
+    off_t offset;
+    struct Data data;
+
+    if (fd == -1 || hash == NULL)
+    {
+        return false;
+    }
+
+    offset = lseek(fd, 0, SEEK_SET);
+
+    while ((data = read_file(fd, offset)).key != NULL)
+    {
+        handler(hash, data, offset);
+        offset = lseek(fd, 0, SEEK_CUR);
+        destroy_data(&data);
+    }
+
+    return true;
+}
+
+int handle_command(size_t argc, char** argv, Node** hash, int fd)
 {
     char command;
     char *key;
     char* value;
-    int fd = -1;
-
-    if (!create_file(&fd, "file"))
-    {
-        printf("ERROR: Can not open file");
-        return -1;
-    }
 
     if (argc < 2)
     {
@@ -56,8 +136,14 @@ int handle_command(size_t argc, char** argv, Node** hash)
     }
     case 'g':
     {
-        off_t offset = atoll(get_value(hash, key));
+        char* offset_str = get_value(hash, key);
+
+        if (offset_str == NULL)
+            break;
+
+        off_t offset = atoll(offset_str);
         struct Data data = read_file(fd, offset);
+        printf("value = %s\n", (char *)data.value);
         destroy_data(&data);
         break;
     }
@@ -72,6 +158,24 @@ int handle_command(size_t argc, char** argv, Node** hash)
 void read_commands(Node** hash)
 {
     char line[1024];
+    int meta_fd = -1;
+    int fd = -1;
+    char path[256] = {0};
+    struct Data metadata;
+
+    if (!directory_exists("data") && mkdir("data", 0777) != 0)
+    {
+        printf("ERROR: Can not create directory 'data'\n");
+        return;
+    }
+
+    if (!create_file(&meta_fd, "data/metadata"))
+    {
+        printf("ERROR: Can not open file 'metadata'");
+        return;
+    }
+
+    handle_data(hash, meta_fd, metadata_handler);
 
     while (scanf(" %[^\n]s", line) != EOF)
     {
@@ -81,9 +185,39 @@ void read_commands(Node** hash)
         while(argv && argv[argc])
             argc++;
 
-        handle_command(argc, argv, hash);
+        if (fd == -1)
+        {
+            char *filename = get_next_name(meta_fd);
+            sprintf(path, "data/%s", filename);
+
+            if (!create_file(&fd, path))
+            {
+                printf("ERROR: Can not open file");
+                perror("error");
+                return;
+            }
+
+            if (!file_exists(path))
+            {
+                metadata = make_data(filename, NULL);
+                write_to_file(meta_fd, metadata);
+                destroy_data(&metadata);
+            }
+            
+            free(filename);
+        }
+
+        handle_command(argc, argv, hash, fd);
         free_splits(argv);
+
+        if (is_full_file(path))
+        {
+            delete_file(fd);
+            fd = -1;
+        }
     }
+
+    delete_file(meta_fd);
 }
 
 int main()

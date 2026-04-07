@@ -4,6 +4,36 @@
 #include <unistd.h>
 #include <stdlib.h>
 #include <stdio.h>
+#include <sys/stat.h>
+
+bool directory_exists(char *path)
+{
+    struct stat stats;
+
+    return stat(path, &stats) == 0 && S_ISDIR(stats.st_mode);
+}
+
+bool file_exists(char *path)
+{
+    struct stat stats;
+
+    return stat(path, &stats) == 0 && S_ISREG(stats.st_mode);
+}
+
+bool is_full_file(char *path)
+{
+    struct stat stats;
+
+    if (stat(path, &stats) == 0)
+    {
+        if (stats.st_size >= MAX_FILE_SIZE)
+        {
+            return true;
+        }
+    }
+
+    return false;
+}
 
 bool create_file(int *fd, char* path)
 {
@@ -47,10 +77,8 @@ off_t write_to_file(int fd, struct Data data)
 
 struct Data read_file(int fd, off_t offset)
 {
-    struct Data result;
+    struct Data result = {0, 0, NULL, NULL};
     size_t bytes;
-    result.key = NULL;
-    result.value = NULL;
 
     if (fd == -1)
     {
@@ -62,12 +90,12 @@ struct Data read_file(int fd, off_t offset)
         goto cleanup;
     }
 
-    if (read(fd, &result.key_size, sizeof(size_t)) == -1)
+    if (read(fd, &result.key_size, sizeof(size_t)) != sizeof(size_t))
     {
         goto cleanup;
     }
 
-    result.key = calloc(result.key_size, sizeof(char));
+    result.key = calloc(result.key_size + 1, sizeof(char));
 
     if (result.key == NULL)
     {
@@ -79,12 +107,12 @@ struct Data read_file(int fd, off_t offset)
         goto cleanup;
     }
 
-    if (read(fd, &result.value_size, sizeof(size_t)) == -1)
+    if (read(fd, &result.value_size, sizeof(size_t)) != sizeof(size_t))
     {
         goto cleanup;
     }
 
-    result.value = calloc(result.value_size, sizeof(char));
+    result.value = calloc(result.value_size + 1, sizeof(char));
 
     if (result.value == NULL)
     {

@@ -8,5 +8,8 @@ TODO:
 - [x] Add pipes:
     * [x] Run all tests
     * [x] Run all tests in valgrind
-- Save data to disk and save offset to hash
-- Startup = read data from disk to hash
+- [x] Save data to disk and save offset to hash
+    * [x] Save data to disk
+    * [x] One page = ~4Kb
+- [x] Startup = read data from disk to hash
+- Add issues for todo
