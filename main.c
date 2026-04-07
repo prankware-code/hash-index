@@ -8,34 +8,7 @@
 #include <time.h>
 #include <unistd.h>
 
-bool directory_exists(char *path)
-{
-    struct stat stats;
-
-    return stat(path, &stats) == 0 && S_ISDIR(stats.st_mode);
-}
-
-bool file_exists(char *path)
-{
-    struct stat stats;
-
-    return stat(path, &stats) == 0;
-}
-
-bool file_is_full(char *path)
-{
-    struct stat stats;
-
-    if (stat(path, &stats) == 0)
-    {
-        if (stats.st_size >= 4096)
-        {
-            return true;
-        }
-    }
-
-    return false;
-}
+bool handle_data(Node **hash, int fd, bool (*handler)(Node**, struct Data, off_t));
 
 char* get_next_name(int meta_fd)
 {
@@ -48,7 +21,7 @@ char* get_next_name(int meta_fd)
 
     while ((data = read_file(meta_fd, offset)).key != NULL)
     {
-        if (!file_is_full(data.key))
+        if (!is_full_file(data.key))
         {
             result = strdup(data.key);
             destroy_data(&data);
@@ -65,7 +38,40 @@ char* get_next_name(int meta_fd)
     return result;
 }
 
-bool read_data(Node **hash, int fd)
+bool data_handler(Node** hash, struct Data data, off_t offset)
+{
+    char buf[20];
+    sprintf(buf, "%ld", offset);
+    set_value(hash, data.key, buf);
+
+    return true;
+}
+
+bool metadata_handler(Node** hash, struct Data data, off_t offset)
+{
+    char path[256] = {0};
+    int fd = -1;
+
+    sprintf(path, "data/%s", (char *)data.key);
+
+    if (!file_exists(path))
+    {
+        return false;
+    }
+
+    if (!create_file(&fd, path))
+    {
+        destroy_data(&data);
+        return false;
+    }
+
+    handle_data(hash, fd, data_handler);
+    delete_file(fd);
+
+    return true;
+}
+
+bool handle_data(Node **hash, int fd, bool (*handler)(Node**, struct Data, off_t))
 {
     off_t offset;
     struct Data data;
@@ -79,50 +85,9 @@ bool read_data(Node **hash, int fd)
 
     while ((data = read_file(fd, offset)).key != NULL)
     {
-        char buf[20];
-        sprintf(buf, "%ld", offset);
-        set_value(hash, data.key, buf);
+        handler(hash, data, offset);
         offset = lseek(fd, 0, SEEK_CUR);
         destroy_data(&data);
-    }
-}
-
-bool read_metadata(Node **hash, int meta_fd)
-{
-    struct Data data;
-    off_t offset;
-    int fd = -1;
-
-    if (meta_fd == -1 || hash == NULL)
-    {
-        return false;
-    }
-
-    offset = lseek(meta_fd, 0, SEEK_SET);
-
-    while ((data = read_file(meta_fd, offset)).key != NULL)
-    {
-        char path[256] = {0};
-        sprintf(path, "data/%s", (char *)data.key);
-
-        offset = lseek(fd, 0, SEEK_CUR);
-
-        if (!file_exists(path))
-        {
-            destroy_data(&data);
-            continue;
-        }
-
-        if (!create_file(&fd, path))
-        {
-            destroy_data(&data);
-            continue;
-        }
-
-        read_data(hash, fd);
-
-        destroy_data(&data);
-        delete_file(fd);
     }
 
     return true;
@@ -212,7 +177,7 @@ void read_commands(Node** hash)
         return;
     }
 
-    read_metadata(hash, meta_fd);
+    handle_data(hash, meta_fd, metadata_handler);
 
     while (scanf(" %[^\n]s", line) != EOF)
     {
@@ -240,13 +205,14 @@ void read_commands(Node** hash)
                 write_to_file(meta_fd, metadata);
                 destroy_data(&metadata);
             }
+            
             free(filename);
         }
 
         handle_command(argc, argv, hash, fd);
         free_splits(argv);
 
-        if (file_is_full(path))
+        if (is_full_file(path))
         {
             delete_file(fd);
             fd = -1;

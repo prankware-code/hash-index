@@ -4,6 +4,36 @@
 #include <unistd.h>
 #include <stdlib.h>
 #include <stdio.h>
+#include <sys/stat.h>
+
+bool directory_exists(char *path)
+{
+    struct stat stats;
+
+    return stat(path, &stats) == 0 && S_ISDIR(stats.st_mode);
+}
+
+bool file_exists(char *path)
+{
+    struct stat stats;
+
+    return stat(path, &stats) == 0 && S_ISREG(stats.st_mode);
+}
+
+bool is_full_file(char *path)
+{
+    struct stat stats;
+
+    if (stat(path, &stats) == 0)
+    {
+        if (stats.st_size >= MAX_FILE_SIZE)
+        {
+            return true;
+        }
+    }
+
+    return false;
+}
 
 bool create_file(int *fd, char* path)
 {
