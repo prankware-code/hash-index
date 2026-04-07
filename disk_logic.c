@@ -77,12 +77,8 @@ off_t write_to_file(int fd, struct Data data)
 
 struct Data read_file(int fd, off_t offset)
 {
-    struct Data result;
+    struct Data result = {0, 0, NULL, NULL};
     size_t bytes;
-    result.key_size = 0;
-    result.value_size = 0;
-    result.key = NULL;
-    result.value = NULL;
 
     if (fd == -1)
     {
