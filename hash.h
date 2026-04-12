@@ -13,6 +13,7 @@ typedef struct Node
     void            *data;
     size_t          data_length;
     struct Node     *next;
+    struct Node     *parrent;
 } Node;
 
 Node** init_hash();
@@ -20,12 +21,14 @@ void destroy_hash(Node **hash);
 
 void set_value(Node** hash, char* key, char *value);
 char *get_value(Node** hash, char* key);
+void remove_key(Node** hash, char* key);
 
 #ifdef INCLUDE_UTIL
 size_t accumulate_array(char *arr);
 size_t hashing(char *str);
 Node* init_node();
 void destroy_node(Node* node);
+Node *find_key(Node** hash, char* key);
 #endif
 
 #endif

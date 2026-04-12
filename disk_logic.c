@@ -64,6 +64,9 @@ off_t write_to_file(int fd, struct Data data)
 
     offset = lseek(fd, 0, SEEK_END);
 
+    if (write(fd, &data.state, sizeof(enum State)) == -1)
+        return -1;
+
     if (write(fd, &data.key_size, sizeof(size_t)) == -1 ||
         write(fd, data.key, data.key_size) == -1)
         return -1;
@@ -86,6 +89,11 @@ struct Data read_file(int fd, off_t offset)
     }
 
     if (lseek(fd, offset, SEEK_SET) == -1)
+    {
+        goto cleanup;
+    }
+
+    if (read(fd, &result.state, sizeof(enum State)) == -1)
     {
         goto cleanup;
     }

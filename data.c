@@ -4,9 +4,9 @@
 #include <string.h>
 #include <stdio.h>
 
-struct Data make_data(const char *key, const char *value)
+struct Data make_data(const char *key, const char *value, enum State state)
 {
-    struct Data data = {0, 0, NULL, NULL};
+    struct Data data = {0, 0, NULL, NULL, state};
 
     if (key == NULL)
     {
