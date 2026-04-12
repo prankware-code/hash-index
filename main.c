@@ -40,7 +40,11 @@ bool data_handler(Node** hash, struct Data data, off_t offset)
 {
     char buf[20];
     sprintf(buf, "%ld", offset);
-    set_value(hash, data.key, buf);
+
+    if (data.state == SET)
+        set_value(hash, data.key, buf);
+    else
+        remove_key(hash, data.key);
 
     return true;
 }
@@ -103,12 +107,6 @@ int handle_command(size_t argc, char** argv, Node** hash, int fd)
         return -1;
     }
 
-    if (strcmp(argv[0], "s") != 0 && strcmp(argv[0], "g") != 0)
-    {
-        printf("ERROR: Command %s not found\n", argv[0]);
-        return -1;
-    }
-
     command = argv[0][0];
     key = argv[1];
 
@@ -120,12 +118,11 @@ int handle_command(size_t argc, char** argv, Node** hash, int fd)
         if (argc < 3)
         {
             printf("ERROR: Too few arguments '%ld'\n", argc);
-            free_splits(argv);
             return -1;
         }
         value = argv[2];
 
-        struct Data data = make_data(key, value);
+        struct Data data = make_data(key, value, SET);
         off_t offset = write_to_file(fd, data);
         destroy_data(&data);
 
@@ -136,7 +133,7 @@ int handle_command(size_t argc, char** argv, Node** hash, int fd)
     }
     case 'g':
     {
-        char* offset_str = get_value(hash, key);
+        char *offset_str = get_value(hash, key);
 
         if (offset_str == NULL)
             break;
@@ -147,9 +144,17 @@ int handle_command(size_t argc, char** argv, Node** hash, int fd)
         destroy_data(&data);
         break;
     }
-    default:
-        printf("ERROR: Command not found");
+    case 'r':
+    {
+        remove_key(hash, key);
+        struct Data data = make_data(key, NULL, REMOVE);
+        write_to_file(fd, data);
+        destroy_data(&data);
         break;
+    }
+    default:
+        printf("ERROR: Command %s not found\n", argv[0]);
+        return -1;
     }
 
     return 1;
@@ -190,18 +195,18 @@ void read_commands(Node** hash)
             char *filename = get_next_name(meta_fd);
             sprintf(path, "data/%s", filename);
 
+            if (!file_exists(path))
+            {
+                metadata = make_data(filename, NULL, UNDEFINED);
+                write_to_file(meta_fd, metadata);
+                destroy_data(&metadata);
+            }
+
             if (!create_file(&fd, path))
             {
                 printf("ERROR: Can not open file");
                 perror("error");
                 return;
-            }
-
-            if (!file_exists(path))
-            {
-                metadata = make_data(filename, NULL);
-                write_to_file(meta_fd, metadata);
-                destroy_data(&metadata);
             }
             
             free(filename);

@@ -17,6 +17,7 @@ Node* init_node()
     node->data = NULL;
     node->data_length = 0;
     node->next = NULL;
+    node->parrent = NULL;
 
     return node;
 }
@@ -54,6 +55,30 @@ size_t hashing(char *str)
     if (str == NULL || HASH_ARRAY_SIZE == 0)
         return 0;
     return (strlen(str) + accumulate_array(str)) % HASH_ARRAY_SIZE;
+}
+
+Node *find_key(Node** hash, char* key)
+{
+    size_t idx = hashing(key);
+    Node *node;
+
+    if (hash == NULL || key == NULL)
+    {
+        return NULL;
+    }
+
+    node = hash[idx];
+
+    while(node)
+    {
+        if (node->key && strcmp(node->key, key) == 0)
+        {
+            return node;
+        }
+        node = node->next;
+    }
+
+    return NULL;
 }
 
 Node** init_hash()
@@ -127,27 +152,46 @@ void set_value(Node** hash, char* key, char *value)
     }
 
     next->next = node;
+    node->parrent = next;
 }
 
 char *get_value(Node** hash, char* key)
 {
-    size_t idx = hashing(key);
-    Node *node;
+    Node* node = find_key(hash, key);
 
-    if (hash == NULL || key == NULL)
+    return node == NULL ? NULL : (char *)node->data;
+}
+
+void remove_key(Node** hash, char* key)
+{
+    Node* node = (find_key(hash, key)), *prev;
+
+    if (!node)
     {
-        return NULL;
+        return;
     }
 
-    node = hash[idx];
-    while(node)
+    prev = node->parrent;
+    
+    if (prev)
     {
-        if (strcmp(node->key, key) == 0)
+        prev->next = node->next;
+        
+        if (prev->next)
         {
-            return (char *)(node->data);
+            prev->next->parrent = prev;
         }
-        node = node->next;
+    }
+    else
+    {
+        size_t idx = hashing(key);
+
+        if (node->next)
+            node->next->parrent = NULL;
+
+        hash[idx] = node->next;
     }
 
-    return NULL;
+    destroy_node(node);
+    node = NULL;
 }
